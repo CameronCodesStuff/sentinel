@@ -10,12 +10,13 @@
 </head>
 <body>
 
+  <!-- AUTH -->
   <div id="auth-screen" class="screen active">
     <div class="auth-bg"><div class="scanline"></div><div class="grid-overlay"></div></div>
     <div class="auth-container">
       <div class="auth-logo">
         <div class="logo-icon">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 40 40" fill="none">
             <circle cx="20" cy="20" r="18" stroke="var(--accent)" stroke-width="1.5"/>
             <circle cx="20" cy="20" r="8" stroke="var(--accent)" stroke-width="1.5"/>
             <line x1="20" y1="2" x2="20" y2="12" stroke="var(--accent)" stroke-width="1.5"/>
@@ -49,6 +50,7 @@
     </div>
   </div>
 
+  <!-- OWNER -->
   <div id="owner-screen" class="screen">
     <header class="topbar">
       <div class="topbar-left">
@@ -67,16 +69,18 @@
           <span class="cam-label">LIVE FEED — CAM 01</span>
           <div class="cam-controls">
             <button class="ctrl-btn" id="toggle-detection-btn" onclick="toggleDetection()">PAUSE</button>
+            <button class="ctrl-btn" onclick="toggleFullscreen('owner-cam-wrap')">⛶ FULLSCREEN</button>
             <button class="ctrl-btn danger" onclick="stopBroadcast()">STOP</button>
           </div>
         </div>
-        <div class="cam-container">
+        <div class="cam-container" id="owner-cam-wrap">
           <video id="owner-video" autoplay muted playsinline></video>
           <canvas id="detection-canvas"></canvas>
           <div class="cam-overlay" id="cam-overlay"><span>INITIALIZING...</span></div>
           <div class="detection-flash" id="detection-flash"></div>
           <div class="corner tl"></div><div class="corner tr"></div>
           <div class="corner bl"></div><div class="corner br"></div>
+          <button class="fs-exit-btn" onclick="exitFullscreen()" title="Exit fullscreen">✕</button>
         </div>
         <div class="cam-footer">
           <div class="fps-counter">FPS <span id="fps-val">--</span></div>
@@ -109,14 +113,15 @@
     </div>
   </div>
 
+  <!-- VIEWER -->
   <div id="viewer-screen" class="screen">
     <header class="topbar">
       <div class="topbar-left">
         <div class="logo-small"><div class="pulse-dot" id="viewer-pulse"></div><span>SENTINEL</span></div>
-        <div class="status-badge" id="stream-status">● CONNECTING...</div>
+        <div class="status-badge dim" id="stream-status">● CONNECTING...</div>
       </div>
       <div class="topbar-right">
-        <button class="btn-ghost" id="library-btn" onclick="openLibrary()">📁 LIBRARY</button>
+        <button class="btn-ghost" onclick="openLibrary()">📁 LIBRARY</button>
         <div class="stat-chip mobile-hide"><span class="chip-label">LOGGED IN AS</span><span class="chip-val" id="viewer-username-display">--</span></div>
         <button class="btn-ghost" onclick="logout()">LOGOUT</button>
       </div>
@@ -125,27 +130,26 @@
       <div class="stream-panel">
         <div class="cam-header">
           <span class="cam-label">OWNER STREAM — CAM 01</span>
-          <span id="stream-live-indicator" class="offline-badge">OFFLINE</span>
+          <div class="cam-controls">
+            <button class="ctrl-btn" onclick="toggleFullscreen('viewer-cam-wrap')">⛶ FULLSCREEN</button>
+            <span id="stream-live-indicator" class="offline-badge">OFFLINE</span>
+          </div>
         </div>
-        <div class="cam-container viewer-cam">
+        <div class="cam-container" id="viewer-cam-wrap">
           <div class="offline-screen" id="offline-screen">
-            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="60" height="60">
+            <svg viewBox="0 0 60 60" fill="none" width="60" height="60">
               <circle cx="30" cy="30" r="28" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
               <line x1="15" y1="15" x2="45" y2="45" stroke="var(--muted)" stroke-width="2"/>
               <circle cx="30" cy="30" r="10" stroke="var(--muted)" stroke-width="1.5"/>
             </svg>
             <p>Owner is offline</p>
-            <p class="offline-sub">You'll be notified when live</p>
+            <p class="offline-sub">Stream will appear here when live</p>
           </div>
-          <div id="live-stream-view" style="display:none;width:100%;height:100%;position:relative;">
-            <div class="live-placeholder">
-              <div class="live-pulse"></div>
-              <p>Stream Active</p>
-              <p class="live-sub">Motion detection is running</p>
-            </div>
-          </div>
+          <video id="viewer-video" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
           <div class="corner tl"></div><div class="corner tr"></div>
           <div class="corner bl"></div><div class="corner br"></div>
+          <div class="live-badge-overlay" id="live-badge-overlay" style="display:none;">● LIVE</div>
+          <button class="fs-exit-btn" onclick="exitFullscreen()" title="Exit fullscreen">✕</button>
         </div>
         <div class="cam-footer">
           <div class="detect-status" id="viewer-detect-status">WAITING...</div>
@@ -178,6 +182,7 @@
     </div>
   </div>
 
+  <!-- LIBRARY MODAL -->
   <div id="library-modal" class="modal-overlay" onclick="closeLibraryOutside(event)">
     <div class="modal">
       <div class="modal-header">
@@ -185,16 +190,17 @@
         <button class="modal-close" onclick="closeLibrary()">✕</button>
       </div>
       <div class="modal-filters">
-        <button class="filter-btn active" onclick="filterLibrary('all', this)">ALL</button>
-        <button class="filter-btn" onclick="filterLibrary('today', this)">TODAY</button>
-        <button class="filter-btn" onclick="filterLibrary('week', this)">THIS WEEK</button>
+        <button class="filter-btn active" onclick="filterLibrary('all',this)">ALL</button>
+        <button class="filter-btn" onclick="filterLibrary('today',this)">TODAY</button>
+        <button class="filter-btn" onclick="filterLibrary('week',this)">THIS WEEK</button>
       </div>
       <div class="library-grid" id="library-grid">
-        <div class="lib-loading">Loading clips...</div>
+        <div class="lib-loading">Loading...</div>
       </div>
     </div>
   </div>
 
+  <!-- CLIP DETAIL MODAL -->
   <div id="clip-modal" class="modal-overlay" onclick="closeClipOutside(event)">
     <div class="modal clip-modal">
       <div class="modal-header">
@@ -205,7 +211,7 @@
         <button class="modal-close" onclick="closeClip()">✕</button>
       </div>
       <div class="clip-preview-container">
-        <img id="clip-preview-img" src="" alt="Detection preview"/>
+        <img id="clip-preview-img" src="" alt="Preview"/>
         <div class="clip-info-grid" id="clip-info-grid"></div>
       </div>
     </div>
@@ -216,6 +222,7 @@
   <script type="module" src="js/firebase-config.js"></script>
   <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/detection.js"></script>
+  <script type="module" src="js/webrtc.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

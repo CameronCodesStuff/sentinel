@@ -308,3 +308,66 @@ html, body {
 
   .library-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+
+/* FULLSCREEN */
+.cam-container.fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2000 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+}
+
+.cam-container.fullscreen video,
+.cam-container.fullscreen canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.cam-container.fullscreen .offline-screen {
+  height: 100vh;
+}
+
+body.has-fullscreen .fs-exit-btn { display: flex; }
+
+.fs-exit-btn {
+  display: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2100;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fs-exit-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* LIVE BADGE OVERLAY */
+.live-badge-overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  animation: pulse-live 1.5s ease-out infinite;
+  box-shadow: 0 0 12px rgba(255,59,59,0.5);
+}
