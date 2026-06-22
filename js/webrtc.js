@@ -11,9 +11,9 @@ const ICE_SERVERS = {
 
 export class OwnerBroadcaster {
   constructor(stream) {
-    this.stream   = stream;
-    this.peers    = {};
-    this.offerRef = ref(rtdb, "webrtc/offers");
+    this.stream     = stream;
+    this.peers      = {};
+    this.offerRef   = ref(rtdb, "webrtc/offers");
     this._listening = false;
   }
 
@@ -21,10 +21,20 @@ export class OwnerBroadcaster {
     if (this._listening) return;
     this._listening = true;
 
+    // Clear any stale signaling data from previous sessions
+    set(ref(rtdb, "webrtc/answers"), null);
+    set(ref(rtdb, "webrtc/candidates"), null);
+
     onChildAdded(this.offerRef, async snap => {
       const viewerId = snap.key;
       const data     = snap.val();
       if (!data || !data.sdp) return;
+
+      // Close any existing peer for this viewer
+      if (this.peers[viewerId]) {
+        this.peers[viewerId].close();
+        delete this.peers[viewerId];
+      }
 
       const pc = new RTCPeerConnection(ICE_SERVERS);
       this.peers[viewerId] = pc;
@@ -37,41 +47,47 @@ export class OwnerBroadcaster {
         }
       };
 
-      await pc.setRemoteDescription(new RTCSessionDescription(data));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          pc.close();
+          delete this.peers[viewerId];
+        }
+      };
 
-      await set(ref(rtdb, `webrtc/answers/${viewerId}`), {
-        sdp:  answer.sdp,
-        type: answer.type
-      });
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(data));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await set(ref(rtdb, `webrtc/answers/${viewerId}`), { sdp: answer.sdp, type: answer.type });
 
-      onChildAdded(ref(rtdb, `webrtc/candidates/${viewerId}-to-owner`), async candSnap => {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candSnap.val()));
-        } catch (e) {}
-      });
+        onChildAdded(ref(rtdb, `webrtc/candidates/${viewerId}-to-owner`), async candSnap => {
+          try {
+            if (pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(candSnap.val()));
+          } catch (e) {}
+        });
+      } catch (e) { console.warn("Broadcaster peer error:", e); }
     });
   }
 
   stop() {
     Object.values(this.peers).forEach(pc => pc.close());
     this.peers = {};
-    set(ref(rtdb, "webrtc/answers"), null);
-    set(ref(rtdb, "webrtc/offers"), null);
-    set(ref(rtdb, "webrtc/candidates"), null);
+    set(ref(rtdb, "webrtc"), null);
   }
 }
 
 export class ViewerReceiver {
   constructor(videoEl) {
-    this.videoEl  = videoEl;
-    this.pc       = null;
-    this.viewerId = `viewer_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+    this.videoEl      = videoEl;
+    this.pc           = null;
+    this.viewerId     = `v_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+    this._unsubAnswer = null;
+    this._reconnectTimer = null;
+    this._connected   = false;
   }
 
   async connect() {
-    if (this.pc) { this.pc.close(); this.pc = null; }
+    this._cleanup();
 
     this.pc = new RTCPeerConnection(ICE_SERVERS);
 
@@ -79,17 +95,20 @@ export class ViewerReceiver {
       if (e.streams && e.streams[0]) {
         this.videoEl.srcObject = e.streams[0];
         this.videoEl.style.display = "block";
-        const off = document.getElementById("offline-screen");
-        if (off) off.style.display = "none";
-        const badge = document.getElementById("live-badge-overlay");
-        if (badge) badge.style.display = "flex";
+        this._connected = true;
+        this._setOffline(false);
       }
     };
 
     this.pc.oniceconnectionstatechange = () => {
-      if (this.pc.iceConnectionState === "disconnected" || this.pc.iceConnectionState === "failed") {
-        this._showOffline();
-        setTimeout(() => this.connect(), 5000);
+      const state = this.pc.iceConnectionState;
+      if (state === "connected" || state === "completed") {
+        this._connected = true;
+      }
+      if ((state === "disconnected" || state === "failed") && this._connected) {
+        this._connected = false;
+        this._setOffline(true);
+        this._scheduleReconnect();
       }
     };
 
@@ -102,48 +121,78 @@ export class ViewerReceiver {
     this.pc.addTransceiver("video", { direction: "recvonly" });
     this.pc.addTransceiver("audio", { direction: "recvonly" });
 
-    const offer = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offer);
+    try {
+      const offer = await this.pc.createOffer();
+      await this.pc.setLocalDescription(offer);
 
-    await set(ref(rtdb, `webrtc/offers/${this.viewerId}`), {
-      sdp:  offer.sdp,
-      type: offer.type
-    });
+      await set(ref(rtdb, `webrtc/offers/${this.viewerId}`), { sdp: offer.sdp, type: offer.type });
 
-    const answerRef = ref(rtdb, `webrtc/answers/${this.viewerId}`);
-    const unsub = onValue(answerRef, async snap => {
-      const data = snap.val();
-      if (!data || !data.sdp) return;
-      if (this.pc.signalingState === "have-local-offer") {
-        try {
-          await this.pc.setRemoteDescription(new RTCSessionDescription(data));
-        } catch (e) {}
-      }
-    });
-
-    onChildAdded(ref(rtdb, `webrtc/candidates/owner-to-${this.viewerId}`), async snap => {
-      try {
-        if (this.pc.remoteDescription) {
-          await this.pc.addIceCandidate(new RTCIceCandidate(snap.val()));
+      // Listen for answer
+      const answerRef = ref(rtdb, `webrtc/answers/${this.viewerId}`);
+      this._unsubAnswer = onValue(answerRef, async snap => {
+        const data = snap.val();
+        if (!data || !data.sdp) return;
+        if (this.pc && this.pc.signalingState === "have-local-offer") {
+          try {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(data));
+          } catch (e) {}
         }
-      } catch (e) {}
-    });
+      });
+
+      // Listen for ICE candidates from owner
+      onChildAdded(ref(rtdb, `webrtc/candidates/owner-to-${this.viewerId}`), async snap => {
+        try {
+          if (this.pc && this.pc.remoteDescription) {
+            await this.pc.addIceCandidate(new RTCIceCandidate(snap.val()));
+          }
+        } catch (e) {}
+      });
+
+      // Timeout — if no track in 8s, retry
+      setTimeout(() => {
+        if (!this._connected) {
+          this._scheduleReconnect();
+        }
+      }, 8000);
+
+    } catch (e) {
+      console.warn("Viewer connect error:", e);
+      this._scheduleReconnect();
+    }
   }
 
-  _showOffline() {
-    if (this.videoEl) { this.videoEl.srcObject = null; this.videoEl.style.display = "none"; }
-    const off = document.getElementById("offline-screen");
-    if (off) off.style.display = "flex";
-    const badge = document.getElementById("live-badge-overlay");
-    if (badge) badge.style.display = "none";
+  _scheduleReconnect() {
+    if (this._reconnectTimer) return;
+    this._reconnectTimer = setTimeout(() => {
+      this._reconnectTimer = null;
+      this.connect();
+    }, 4000);
   }
 
-  disconnect() {
+  _cleanup() {
+    if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
     if (this.pc) { this.pc.close(); this.pc = null; }
     remove(ref(rtdb, `webrtc/offers/${this.viewerId}`));
     remove(ref(rtdb, `webrtc/answers/${this.viewerId}`));
     remove(ref(rtdb, `webrtc/candidates/${this.viewerId}-to-owner`));
     remove(ref(rtdb, `webrtc/candidates/owner-to-${this.viewerId}`));
-    this._showOffline();
+  }
+
+  _setOffline(isOffline) {
+    const off   = document.getElementById("offline-screen");
+    const badge = document.getElementById("live-badge-overlay");
+    if (isOffline) {
+      if (this.videoEl) { this.videoEl.srcObject = null; this.videoEl.style.display = "none"; }
+      if (off)   off.style.display = "flex";
+      if (badge) badge.style.display = "none";
+    } else {
+      if (off)   off.style.display = "none";
+      if (badge) badge.style.display = "flex";
+    }
+  }
+
+  disconnect() {
+    this._cleanup();
+    this._setOffline(true);
   }
 }

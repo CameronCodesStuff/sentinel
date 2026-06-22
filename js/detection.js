@@ -3,7 +3,7 @@ import {
   collection, addDoc, serverTimestamp, doc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  ref, set, onValue, onDisconnect, serverTimestamp as rtst
+  ref, set, onValue, onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const ANALYSIS_INTERVAL = 80;
@@ -31,14 +31,14 @@ export class DetectionEngine {
     this.postHoldTimer   = null;
     this.totalDetections = 0;
 
-    this.fpsTimes    = [];
+    this.fpsTimes     = [];
     this._sessionSecs = 0;
-    this._rafId      = null;
-    this._detLoop    = null;
-    this._snapLoop   = null;
+    this._rafId       = null;
+    this._detLoop     = null;
+    this._snapLoop    = null;
     this._sessionLoop = null;
-    this._tsLoop     = null;
-    this._lastBlobs  = [];
+    this._tsLoop      = null;
+    this._lastBlobs   = [];
 
     this.onDetectionStart = null;
     this.onDetectionEnd   = null;
@@ -200,7 +200,12 @@ export class DetectionEngine {
         if (used.has(j)) continue;
         const bj = blobs[j], m = 15;
         if (b.x-m < bj.x+bj.w && b.x+b.w+m > bj.x && b.y-m < bj.y+bj.h && b.y+b.h+m > bj.y) {
-          b = { x: Math.min(b.x,bj.x), y: Math.min(b.y,bj.y), w: Math.max(b.x+b.w,bj.x+bj.w)-Math.min(b.x,bj.x), h: Math.max(b.y+b.h,bj.y+bj.h)-Math.min(b.y,bj.y), area: b.area+bj.area };
+          b = {
+            x: Math.min(b.x,bj.x), y: Math.min(b.y,bj.y),
+            w: Math.max(b.x+b.w,bj.x+bj.w)-Math.min(b.x,bj.x),
+            h: Math.max(b.y+b.h,bj.y+bj.h)-Math.min(b.y,bj.y),
+            area: b.area+bj.area
+          };
           used.add(j);
         }
       }
@@ -239,7 +244,7 @@ export class DetectionEngine {
 
   _onDetected(blobs) {
     if (!this.detecting) {
-      this.detecting     = true;
+      this.detecting      = true;
       this.detectionStart = Date.now();
       this.totalDetections++;
       const countEl = document.getElementById("total-detections");
@@ -266,12 +271,8 @@ export class DetectionEngine {
 
   async _pushLive(blobCount) {
     try {
-      await set(ref(rtdb, "live/owner/latestDetection"), {
-        timestamp: Date.now(),
-        blobCount,
-        status: "detected"
-      });
-    } catch (e) { console.warn("RTDB push failed:", e); }
+      await set(ref(rtdb, "live/owner/latestDetection"), { timestamp: Date.now(), blobCount, status: "detected" });
+    } catch (e) {}
   }
 
   async _saveClip(clip) {
@@ -323,12 +324,17 @@ export async function setOwnerOnline() {
       } catch (e) { console.warn("Presence set failed:", e); }
     }
   });
+
+  // Heartbeat every 10s keeps online: true alive and viewers up to date
+  setInterval(async () => {
+    try {
+      await set(ref(rtdb, "live/owner/updatedAt"), Date.now());
+    } catch (e) {}
+  }, 10000);
 }
 
 export async function setOwnerOffline() {
-  try {
-    await set(ref(rtdb, "live/owner"), { online: false, updatedAt: Date.now() });
-  } catch (e) {}
+  try { await set(ref(rtdb, "live/owner"), { online: false, updatedAt: Date.now() }); } catch (e) {}
 }
 
 export function subscribeToOwnerStatus(cb) {
@@ -340,7 +346,6 @@ export function trackViewerPresence(username) {
   const vRef    = ref(rtdb, `viewers/${safeKey}`);
   onDisconnect(vRef).remove();
   set(vRef, { username, joinedAt: Date.now() });
-
   return onValue(ref(rtdb, "viewers"), snap => {
     const count = snap.val() ? Object.keys(snap.val()).length : 0;
     ["viewer-count","info-viewers"].forEach(id => {
