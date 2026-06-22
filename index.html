@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SENTINEL — Live Detection System</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>SENTINEL</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
   <div id="auth-screen" class="screen active">
-    <div class="auth-bg">
-      <div class="scanline"></div>
-      <div class="grid-overlay"></div>
-    </div>
+    <div class="auth-bg"><div class="scanline"></div><div class="grid-overlay"></div></div>
     <div class="auth-container">
       <div class="auth-logo">
         <div class="logo-icon">
@@ -32,35 +28,20 @@
         <h1 class="logo-text">SENTINEL</h1>
         <p class="logo-sub">LIVE DETECTION SYSTEM</p>
       </div>
-
       <div class="auth-card">
         <div class="tab-row">
           <button class="tab active" id="tab-login" onclick="switchTab('login')">LOGIN</button>
           <button class="tab" id="tab-register" onclick="switchTab('register')">REGISTER</button>
         </div>
-
         <div id="login-form" class="form-block active">
-          <div class="input-group">
-            <label>USERNAME</label>
-            <input type="text" id="login-username" placeholder="enter username" />
-          </div>
-          <div class="input-group">
-            <label>PASSWORD</label>
-            <input type="password" id="login-password" placeholder="••••••••" />
-          </div>
+          <div class="input-group"><label>USERNAME</label><input type="text" id="login-username" placeholder="enter username" autocomplete="username"/></div>
+          <div class="input-group"><label>PASSWORD</label><input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/></div>
           <button class="btn-primary" onclick="login()">AUTHENTICATE</button>
           <p id="login-error" class="form-error"></p>
         </div>
-
         <div id="register-form" class="form-block">
-          <div class="input-group">
-            <label>USERNAME</label>
-            <input type="text" id="reg-username" placeholder="choose username" />
-          </div>
-          <div class="input-group">
-            <label>PASSWORD</label>
-            <input type="password" id="reg-password" placeholder="••••••••" />
-          </div>
+          <div class="input-group"><label>USERNAME</label><input type="text" id="reg-username" placeholder="choose username" autocomplete="username"/></div>
+          <div class="input-group"><label>PASSWORD</label><input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password"/></div>
           <button class="btn-primary" onclick="register()">CREATE ACCOUNT</button>
           <p id="reg-error" class="form-error"></p>
         </div>
@@ -68,50 +49,34 @@
     </div>
   </div>
 
-  <!-- OWNER SCREEN (live broadcast + detection) -->
   <div id="owner-screen" class="screen">
     <header class="topbar">
       <div class="topbar-left">
-        <div class="logo-small">
-          <div class="pulse-dot live"></div>
-          <span>SENTINEL</span>
-        </div>
-        <div class="status-badge" id="owner-status">● BROADCASTING</div>
+        <div class="logo-small"><div class="pulse-dot live"></div><span>SENTINEL</span></div>
+        <div class="status-badge red" id="owner-status">● BROADCASTING</div>
       </div>
       <div class="topbar-right">
-        <div class="stat-chip" id="detection-count-chip">
-          <span class="chip-label">DETECTIONS</span>
-          <span class="chip-val" id="total-detections">0</span>
-        </div>
-        <div class="stat-chip">
-          <span class="chip-label">SESSION</span>
-          <span class="chip-val" id="session-time">00:00</span>
-        </div>
+        <div class="stat-chip"><span class="chip-label">DETECTIONS</span><span class="chip-val" id="total-detections">0</span></div>
+        <div class="stat-chip mobile-hide"><span class="chip-label">SESSION</span><span class="chip-val" id="session-time">00:00</span></div>
         <button class="btn-ghost" onclick="logout()">LOGOUT</button>
       </div>
     </header>
-
     <div class="owner-layout">
-      <!-- Camera feed -->
       <div class="camera-panel">
         <div class="cam-header">
           <span class="cam-label">LIVE FEED — CAM 01</span>
           <div class="cam-controls">
-            <button class="ctrl-btn" id="toggle-detection-btn" onclick="toggleDetection()">PAUSE DETECTION</button>
-            <button class="ctrl-btn danger" onclick="stopBroadcast()">STOP BROADCAST</button>
+            <button class="ctrl-btn" id="toggle-detection-btn" onclick="toggleDetection()">PAUSE</button>
+            <button class="ctrl-btn danger" onclick="stopBroadcast()">STOP</button>
           </div>
         </div>
         <div class="cam-container">
           <video id="owner-video" autoplay muted playsinline></video>
           <canvas id="detection-canvas"></canvas>
-          <div class="cam-overlay" id="cam-overlay">
-            <span>INITIALIZING CAMERA...</span>
-          </div>
+          <div class="cam-overlay" id="cam-overlay"><span>INITIALIZING...</span></div>
           <div class="detection-flash" id="detection-flash"></div>
-          <div class="corner tl"></div>
-          <div class="corner tr"></div>
-          <div class="corner bl"></div>
-          <div class="corner br"></div>
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
         </div>
         <div class="cam-footer">
           <div class="fps-counter">FPS <span id="fps-val">--</span></div>
@@ -119,141 +84,90 @@
           <div class="timestamp" id="live-timestamp">--:--:--</div>
         </div>
       </div>
-
-      <!-- Sidebar -->
       <div class="sidebar">
         <div class="sidebar-section">
           <h3 class="section-title">DETECTION SETTINGS</h3>
           <div class="setting-row">
             <label>SENSITIVITY</label>
-            <input type="range" id="sensitivity-slider" min="1" max="100" value="60" oninput="updateSensitivity(this.value)" />
-            <span id="sensitivity-val">60</span>
-          </div>
-          <div class="setting-row">
-            <label>BUFFER (mins)</label>
-            <input type="range" id="buffer-slider" min="0.5" max="5" step="0.5" value="1" oninput="updateBuffer(this.value)" />
-            <span id="buffer-val">1</span>
+            <input type="range" id="sensitivity-slider" min="1" max="100" value="30" oninput="updateSensitivity(this.value)"/>
+            <span id="sensitivity-val">30</span>
           </div>
           <div class="setting-row toggle-row">
             <label>SAVE CLIPS</label>
-            <div class="toggle" id="save-toggle" onclick="toggleSave()"><div class="toggle-knob"></div></div>
+            <div class="toggle active" id="save-toggle" onclick="toggleSave()"><div class="toggle-knob"></div></div>
           </div>
         </div>
-
         <div class="sidebar-section">
           <h3 class="section-title">RECENT EVENTS</h3>
-          <div class="events-list" id="events-list">
-            <div class="event-empty">No detections yet</div>
-          </div>
+          <div class="events-list" id="events-list"><div class="event-empty">No detections yet</div></div>
         </div>
-
         <div class="sidebar-section">
-          <h3 class="section-title">VIEWER ACCESS</h3>
-          <div class="viewer-info">
-            <p>Share your stream with trusted viewers:</p>
-            <div class="viewer-link" id="viewer-link" onclick="copyLink()">
-              <span id="viewer-url">sentinel.app/view/owner</span>
-              <span class="copy-icon">⎘</span>
-            </div>
-          </div>
-          <div class="online-viewers">
-            <span class="chip-label">ONLINE VIEWERS</span>
-            <span class="viewer-count" id="viewer-count">0</span>
-          </div>
+          <h3 class="section-title">VIEWERS ONLINE</h3>
+          <div class="online-viewers"><span class="viewer-count" id="viewer-count">0</span><span class="chip-label"> connected</span></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- VIEWER SCREEN -->
   <div id="viewer-screen" class="screen">
     <header class="topbar">
       <div class="topbar-left">
-        <div class="logo-small">
-          <div class="pulse-dot"></div>
-          <span>SENTINEL</span>
-        </div>
-        <div class="status-badge viewer" id="stream-status">● CONNECTING...</div>
+        <div class="logo-small"><div class="pulse-dot" id="viewer-pulse"></div><span>SENTINEL</span></div>
+        <div class="status-badge" id="stream-status">● CONNECTING...</div>
       </div>
       <div class="topbar-right">
-        <div class="stat-chip">
-          <span class="chip-label">VIEWER</span>
-          <span class="chip-val" id="viewer-username-display">--</span>
-        </div>
+        <button class="btn-ghost" id="library-btn" onclick="openLibrary()">📁 LIBRARY</button>
+        <div class="stat-chip mobile-hide"><span class="chip-label">LOGGED IN AS</span><span class="chip-val" id="viewer-username-display">--</span></div>
         <button class="btn-ghost" onclick="logout()">LOGOUT</button>
       </div>
     </header>
-
     <div class="viewer-layout">
       <div class="stream-panel">
         <div class="cam-header">
           <span class="cam-label">OWNER STREAM — CAM 01</span>
-          <div class="stream-meta">
-            <span id="stream-live-indicator" class="offline-badge">OFFLINE</span>
-          </div>
+          <span id="stream-live-indicator" class="offline-badge">OFFLINE</span>
         </div>
         <div class="cam-container viewer-cam">
           <div class="offline-screen" id="offline-screen">
-            <div class="offline-icon">
-              <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="30" cy="30" r="28" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
-                <line x1="15" y1="15" x2="45" y2="45" stroke="var(--muted)" stroke-width="2"/>
-                <circle cx="30" cy="30" r="10" stroke="var(--muted)" stroke-width="1.5"/>
-              </svg>
-            </div>
-            <p>Owner is currently offline</p>
-            <p class="offline-sub">You'll be notified when the stream goes live</p>
+            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="60" height="60">
+              <circle cx="30" cy="30" r="28" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+              <line x1="15" y1="15" x2="45" y2="45" stroke="var(--muted)" stroke-width="2"/>
+              <circle cx="30" cy="30" r="10" stroke="var(--muted)" stroke-width="1.5"/>
+            </svg>
+            <p>Owner is offline</p>
+            <p class="offline-sub">You'll be notified when live</p>
           </div>
-          <div id="live-stream-view" style="display:none; width:100%; height:100%; position:relative;">
+          <div id="live-stream-view" style="display:none;width:100%;height:100%;position:relative;">
             <div class="live-placeholder">
               <div class="live-pulse"></div>
               <p>Stream Active</p>
-              <p class="live-sub">Live detections are being monitored by the owner</p>
+              <p class="live-sub">Motion detection is running</p>
             </div>
           </div>
-          <div class="corner tl"></div>
-          <div class="corner tr"></div>
-          <div class="corner bl"></div>
-          <div class="corner br"></div>
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
         </div>
         <div class="cam-footer">
-          <div class="detect-status" id="viewer-detect-status">WAITING FOR STREAM...</div>
+          <div class="detect-status" id="viewer-detect-status">WAITING...</div>
           <div class="timestamp" id="viewer-timestamp">--:--:--</div>
         </div>
       </div>
-
       <div class="sidebar">
         <div class="sidebar-section">
           <h3 class="section-title">STREAM INFO</h3>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">STATUS</span>
-              <span class="info-val" id="info-status">Offline</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">TOTAL DETECTIONS</span>
-              <span class="info-val" id="info-detections">0</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">LAST SEEN</span>
-              <span class="info-val" id="info-last-seen">Never</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">VIEWERS ONLINE</span>
-              <span class="info-val" id="info-viewers">0</span>
-            </div>
+            <div class="info-item"><span class="info-label">STATUS</span><span class="info-val" id="info-status">Offline</span></div>
+            <div class="info-item"><span class="info-label">DETECTIONS</span><span class="info-val" id="info-detections">0</span></div>
+            <div class="info-item"><span class="info-label">LAST SEEN</span><span class="info-val" id="info-last-seen">Never</span></div>
+            <div class="info-item"><span class="info-label">VIEWERS</span><span class="info-val" id="info-viewers">0</span></div>
           </div>
         </div>
-
         <div class="sidebar-section">
-          <h3 class="section-title">DETECTION LOG</h3>
-          <div class="events-list" id="viewer-events-list">
-            <div class="event-empty">No detections yet</div>
-          </div>
+          <h3 class="section-title">LIVE DETECTION LOG</h3>
+          <div class="events-list" id="viewer-events-list"><div class="event-empty">No detections yet</div></div>
         </div>
-
-        <div class="sidebar-section">
-          <h3 class="section-title">LIVE NOTIFICATIONS</h3>
+        <div class="sidebar-section mobile-hide">
+          <h3 class="section-title">NOTIFICATIONS</h3>
           <div class="notif-toggle-row">
             <span>Alert on detection</span>
             <div class="toggle active" id="notif-toggle" onclick="toggleNotifications(this)"><div class="toggle-knob"></div></div>
@@ -264,10 +178,41 @@
     </div>
   </div>
 
-  <!-- Toast notifications -->
+  <div id="library-modal" class="modal-overlay" onclick="closeLibraryOutside(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">DETECTION LIBRARY</h2>
+        <button class="modal-close" onclick="closeLibrary()">✕</button>
+      </div>
+      <div class="modal-filters">
+        <button class="filter-btn active" onclick="filterLibrary('all', this)">ALL</button>
+        <button class="filter-btn" onclick="filterLibrary('today', this)">TODAY</button>
+        <button class="filter-btn" onclick="filterLibrary('week', this)">THIS WEEK</button>
+      </div>
+      <div class="library-grid" id="library-grid">
+        <div class="lib-loading">Loading clips...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="clip-modal" class="modal-overlay" onclick="closeClipOutside(event)">
+    <div class="modal clip-modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="clip-modal-title">DETECTION CLIP</h2>
+          <p class="clip-modal-meta" id="clip-modal-meta"></p>
+        </div>
+        <button class="modal-close" onclick="closeClip()">✕</button>
+      </div>
+      <div class="clip-preview-container">
+        <img id="clip-preview-img" src="" alt="Detection preview"/>
+        <div class="clip-info-grid" id="clip-info-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
 
-  <!-- Firebase SDKs -->
   <script type="module" src="js/firebase-config.js"></script>
   <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/detection.js"></script>
